@@ -23,7 +23,7 @@ public class ChatService
     private ChatBackgroundService backgroundService;
     private IPlayerNameApi playerNameApi;
     private static ConcurrentQueue<DbMessage> recentMessages = new ConcurrentQueue<DbMessage>();
-    static HashSet<string> BadWords = new() { " cock ", "penis ", " ass ", "b.com", "my ah", "/ah ", "/auction", "@everyone", "@here", " retard ", " qf ", " kys ", "nigger ", "nigga ", " fag ", "faggot", "quickerflipper" };
+    static HashSet<string> BadWords = new() { " cock ", "penis ", " ass ", "b.com", "my ah", "/ah ", "/auction", "@everyone", "@here", " retard", " qf ", " kys ", "nigger ", "nigga ", " fag ", "faggot", "quickerflipper" };
     static Prometheus.Counter messagesSent = Prometheus.Metrics.CreateCounter("sky_chat_messages_sent", "Count of messages distributed");
     private ILogger<ChatService> Logger;
     private EmojiService emojiService;
