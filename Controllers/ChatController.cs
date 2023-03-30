@@ -95,10 +95,7 @@ namespace Coflnet.Sky.Chat.Controllers
         public async Task<UnMute> UnMuteUser([FromBody] UnMute mute, [FromHeader] string authorization)
         {
             AssertAuthHeader(authorization);
-            foreach (var service in muteServices)
-            {
-                mute = await service.UnMuteUser(mute, authorization);
-            }
+            await Task.WhenAll(muteServices.Select(s => s.UnMuteUser(mute, authorization)));
             return mute;
         }
     }

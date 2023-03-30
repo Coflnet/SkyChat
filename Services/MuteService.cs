@@ -225,7 +225,6 @@ public class MuteProducer : IMuteService
 
     private async Task<string> GetName(string id)
     {
-        var result = await playerNameApi.PlayerNameNameUuidGetAsync(id);
         try
         {
             var name = await playerNameApi.PlayerNameNameUuidGetAsync(id);
