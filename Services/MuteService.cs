@@ -129,8 +129,8 @@ public class MuteService : IMuteService
         var currentTime = 1;
         foreach (var item in mutes)
         {
-            var text = item.Reason + item.Message;
-            if (text.ToLower().StartsWith("tfm"))
+            var text = (item.Reason + item.Message).ToLower();
+            if (text.StartsWith("tfm"))
                 continue;
             if (text.Contains("rule 1"))
                 currentTime *= 10;
