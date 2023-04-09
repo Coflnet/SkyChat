@@ -138,7 +138,7 @@ public class ChatService
         Mute mute = await muteService.GetMute(message.Uuid);
         if (mute != default)
             throw new ApiException("user_muted", GetMuteMessage(mute));
-        var normalizedMsg = message.Message.ToLower() + ' ';
+        var normalizedMsg = ' ' + message.Message.ToLower() + ' ';
         if (BadWords.Any(word => normalizedMsg.Contains(word)))
             throw new ApiException("bad_words", "message contains bad words and was denied");
 
