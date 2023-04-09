@@ -111,7 +111,7 @@ public class MuteService : IMuteService
         var client = backgroundService.GetClient(clientToken);
         mute.ClientId = client.Id;
         var muteText = mute.Message + mute.Reason;
-        if (muteText.Contains("rule "))
+        if (muteText.Contains("rule ") || mute.Expires == default)
         {
             // rule violation
             var mutes = await db.Mute.Where(u => u.Uuid == mute.Uuid && !u.Status.HasFlag(MuteStatus.CANCELED)).ToListAsync();
