@@ -110,6 +110,10 @@ public class MuteService : IMuteService
     {
         var client = backgroundService.GetClient(clientToken);
         mute.ClientId = client.Id;
+        var minTime = DateTime.Now - TimeSpan.FromHours(6);
+        var recentMutes = await db.Mute.Where(u => u.Muter == mute.Muter && !u.Status.HasFlag(MuteStatus.CANCELED) && u.Timestamp > minTime).ToListAsync();
+        if(recentMutes.Count > 3)
+            throw new ApiException("too_many_mutes", "You have muted too many people recently");
         var muteText = mute.Message + mute.Reason;
         if (muteText.Contains("rule ") || mute.Expires == default)
         {
