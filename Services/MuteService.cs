@@ -108,6 +108,9 @@ public class MuteService : IMuteService
     /// <returns></returns>
     public async Task<Mute> MuteUser(Mute mute, string clientToken)
     {
+        if(mute == null)
+            throw new ApiException("invalid_mute", "The mute was null");
+        ArgumentException.ThrowIfNullOrEmpty(mute.Uuid, nameof(mute.Uuid));
         var client = backgroundService.GetClient(clientToken);
         mute.ClientId = client.Id;
         var minTime = DateTime.Now - TimeSpan.FromHours(6);
