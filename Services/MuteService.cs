@@ -112,6 +112,8 @@ public class MuteService : IMuteService
             throw new ApiException("invalid_mute", "The mute was null");
         ArgumentException.ThrowIfNullOrEmpty(mute.Uuid, nameof(mute.Uuid));
         var client = backgroundService.GetClient(clientToken);
+        if (client.Name.Contains("tfm")) 
+            return mute;
         mute.ClientId = client.Id;
         var minTime = DateTime.Now - TimeSpan.FromHours(6);
         var recentMutes = await db.Mute.Where(u => u.Muter == mute.Muter && !u.Status.HasFlag(MuteStatus.CANCELED) && u.Timestamp > minTime).ToListAsync();
