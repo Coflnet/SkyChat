@@ -139,10 +139,12 @@ public class ChatService
         if (mute != default)
             throw new ApiException("user_muted", GetMuteMessage(mute));
         var normalizedMsg = ' ' + message.Message.ToLower() + ' ';
+        if(normalizedMsg.Contains("my ah "))
+            throw new ApiException("illegal_script", "You shouldn't talk about your ah in the chat, that's considered advertising and not allowed");
         if (BadWords.Any(word => normalizedMsg.Contains(word)))
             throw new ApiException("bad_words", "message contains bad words and was denied");
 
-        if (normalizedMsg.Contains(" binmaster"))
+        if (normalizedMsg.Contains("binmaster"))
             throw new ApiException("illegal_script", "Binmaster violates the hypixel terms of service. Violating the TOS can get your account banned and wiped. Also writing about it in flipper chat gets you muted by TFM.");
     }
 
