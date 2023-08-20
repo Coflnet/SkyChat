@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Net;
 using System.Reflection;
+using Coflnet.Kafka;
 using Coflnet.Sky.Chat.Models;
 using Coflnet.Sky.Chat.Services;
 using Coflnet.Sky.Core;
@@ -72,6 +73,7 @@ namespace Coflnet.Sky.Chat
             services.AddTransient<IMuteService, TfmMuteService>();
             services.AddSingleton<IMuteService, MuteProducer>();
             services.AddSingleton<EmojiService>();
+            services.AddSingleton<KafkaCreator>();
             services.AddSingleton<PlayerName.Client.Api.IPlayerNameApi>(sp =>
             {
                 return new PlayerName.Client.Api.PlayerNameApi(Configuration["PLAYERNAME_BASE_URL"]);
