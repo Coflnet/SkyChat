@@ -11,6 +11,7 @@ using Microsoft.Extensions.Configuration;
 using Confluent.Kafka;
 using Microsoft.Extensions.Logging;
 using Coflnet.Sky.PlayerName.Client.Api;
+using Coflnet.Kafka;
 
 namespace Coflnet.Sky.Chat.Services;
 
@@ -187,10 +188,12 @@ public class MuteProducer : IMuteService
 {
     IConfiguration config;
     private IPlayerNameApi playerNameApi;
-    public MuteProducer(IConfiguration config, IPlayerNameApi playerNameApi)
+    private KafkaCreator kafkaCreator;
+    public MuteProducer(IConfiguration config, IPlayerNameApi playerNameApi, KafkaCreator kafkaCreator)
     {
         this.config = config;
         this.playerNameApi = playerNameApi;
+        this.kafkaCreator = kafkaCreator;
     }
 
     public async Task<Mute> MuteUser(Mute mute, string clientToken)
@@ -223,11 +226,7 @@ public class MuteProducer : IMuteService
 
     private IProducer<string, string> GetProducer()
     {
-        ProducerConfig producerConfig = new ProducerConfig
-        {
-            LingerMs = 0
-        };
-        var producer = new ProducerBuilder<string, string>(producerConfig).Build();
+        var producer = kafkaCreator.BuildProducer<string, string>();
         return producer;
     }
 
