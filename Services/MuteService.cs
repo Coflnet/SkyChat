@@ -225,7 +225,6 @@ public class MuteProducer : IMuteService
     {
         ProducerConfig producerConfig = new ProducerConfig
         {
-            BootstrapServers = config["KAFKA_HOST"],
             LingerMs = 0
         };
         var producer = new ProducerBuilder<string, string>(producerConfig).Build();
