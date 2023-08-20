@@ -161,7 +161,7 @@ public class ChatService
     /// </summary>
     /// <param name="client"></param>
     /// <returns></returns>
-    public async Task<Client> CreateClient(Client client)
+    public async Task<ModelClient> CreateClient(ModelClient client)
     {
         if (await db.Clients.Where(c => c.Name == client.Name).AnyAsync())
             throw new ApiException("client_exists", "A client with the same name already exists");

@@ -173,7 +173,7 @@ public class MuteService : IMuteService
         return await db.Mute.Where(u => u.Uuid == uuid && u.Expires > DateTime.UtcNow && !u.Status.HasFlag(MuteStatus.CANCELED)).OrderByDescending(m => m.Expires).FirstOrDefaultAsync();
     }
 
-    private async Task DisableMute(UnMute unmute, Client client, Mute mute)
+    private async Task DisableMute(UnMute unmute, ModelClient client, Mute mute)
     {
         mute.Status |= MuteStatus.CANCELED;
         mute.UnMuteClientId = client.Id;

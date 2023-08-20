@@ -63,7 +63,7 @@ namespace Coflnet.Sky.Chat.Controllers
         /// <returns></returns>
         [HttpPost]
         [Route("internal/client")]
-        public async Task<CientCreationResponse> CreateClient([FromBody] Client client)
+        public async Task<CientCreationResponse> CreateClient([FromBody] ModelClient client)
         {
             return new CientCreationResponse(await service.CreateClient(client));
         }

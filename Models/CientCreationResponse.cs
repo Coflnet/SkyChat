@@ -5,10 +5,10 @@ namespace Coflnet.Sky.Chat.Models
     /// </summary>
     public class CientCreationResponse
     {
-        public Client Client { get; set; }
+        public ModelClient Client { get; set; }
         public string ApiKey { get; set; }
 
-        public CientCreationResponse(Client client)
+        public CientCreationResponse(ModelClient client)
         {
             Client = client;
             ApiKey = client.ApiKey;

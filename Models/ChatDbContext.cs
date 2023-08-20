@@ -9,7 +9,7 @@ namespace Coflnet.Sky.Chat.Models
     {
         public DbSet<DbMessage> Messages { get; set; }
         public DbSet<Report> Reports { get; set; }
-        public DbSet<Client> Clients { get; set; }
+        public DbSet<ModelClient> Clients { get; set; }
         public DbSet<Mute> Mute { get; set; }
 
         /// <summary>

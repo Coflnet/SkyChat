@@ -27,7 +27,7 @@ namespace Coflnet.Sky.Chat.Services
         private ILogger<ChatBackgroundService> logger;
         private Prometheus.Counter consumeCount = Prometheus.Metrics.CreateCounter("sky_chat_conume", "How many messages were consumed");
 
-        private ConcurrentDictionary<string, Client> Clients = new();
+        private ConcurrentDictionary<string, ModelClient> Clients = new();
         private List<(string WebHook, string WebhookAuth)> Webhooks = new();
 
         public bool Ready => Clients.Count > 0;
@@ -40,14 +40,14 @@ namespace Coflnet.Sky.Chat.Services
             this.logger = logger;
         }
 
-        internal Client GetClient(string clientToken)
+        internal ModelClient GetClient(string clientToken)
         {
-            if (!Clients.TryGetValue(clientToken, out Client client))
+            if (!Clients.TryGetValue(clientToken, out ModelClient client))
                 throw new ApiException("invalid_token", "Invalid client Id/unkown client");
             return client;
         }
 
-        internal Client GetClientByName(string clientName)
+        internal ModelClient GetClientByName(string clientName)
         {
             return Clients.Values.Where(c => c.Name == clientName).FirstOrDefault();
         }
@@ -67,7 +67,7 @@ namespace Coflnet.Sky.Chat.Services
 
             while (!stoppingToken.IsCancellationRequested)
             {
-                Clients = new ConcurrentDictionary<string, Client>(await context.Clients.ToDictionaryAsync(c => c.ApiKey));
+                Clients = new ConcurrentDictionary<string, ModelClient>(await context.Clients.ToDictionaryAsync(c => c.ApiKey));
                 //Webhooks = Clients.Select(c => (c.Value.WebHook, c.Value.WebhookAuth, c)).Where(w => !string.IsNullOrEmpty(w.WebHook)).ToList();
                 await Task.Delay(TimeSpan.FromMinutes(10), stoppingToken);
 

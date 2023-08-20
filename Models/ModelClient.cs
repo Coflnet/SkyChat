@@ -1,5 +1,6 @@
 
 using System;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
 
@@ -9,7 +10,8 @@ namespace Coflnet.Sky.Chat.Models
     /// Client software capeable of sending messages
     /// </summary>
     [DataContract]
-    public class Client
+    [Table("Clients")]
+    public class ModelClient
     {
         /// <summary>
         /// Internal id for updating
