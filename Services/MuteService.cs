@@ -207,6 +207,7 @@ public class MuteProducer : IMuteService
     private async Task ProduceMessage(string message)
     {
         using var producer = GetProducer();
+        await kafkaCreator.CreateTopicIfNotExist(config["TOPICS:DISCORD_MESSAGE"]);
         await producer.ProduceAsync(config["TOPICS:DISCORD_MESSAGE"], new() { Value = JsonConvert.SerializeObject(new { message, channel = "mutes" }) }).ConfigureAwait(false);
     }
 
