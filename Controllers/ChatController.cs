@@ -80,10 +80,10 @@ namespace Coflnet.Sky.Chat.Controllers
         public async Task<Mute> MuteUser([FromBody] Mute mute, [FromHeader] string authorization)
         {
             AssertAuthHeader(authorization);
-            foreach (var s in muteServices)
+            await Parallel.ForEachAsync(muteServices, async (s,c) =>
             {
                 await s.MuteUser(mute, authorization);
-            }
+            });
             //await Task.WhenAll(muteServices.Select(s => s.MuteUser(mute, authorization)));
             return mute;
         }

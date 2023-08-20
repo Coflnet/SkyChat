@@ -109,16 +109,16 @@ public class MuteService : IMuteService
     /// <returns></returns>
     public async Task<Mute> MuteUser(Mute mute, string clientToken)
     {
-        if(mute == null)
+        if (mute == null)
             throw new ApiException("invalid_mute", "The mute was null");
         ArgumentException.ThrowIfNullOrEmpty(mute.Uuid, nameof(mute.Uuid));
         var client = backgroundService.GetClient(clientToken);
-        if (client.Name.Contains("tfm")) 
+        if (client.Name.Contains("tfm"))
             return mute;
         mute.ClientId = client.Id;
         var minTime = DateTime.Now - TimeSpan.FromHours(6);
         var recentMutes = await db.Mute.Where(u => u.Muter == mute.Muter && !u.Status.HasFlag(MuteStatus.CANCELED) && u.Timestamp > minTime).ToListAsync();
-        if(recentMutes.Count > 5 && mute.Muter != "384a029294fc445e863f2c42fe9709cb")
+        if (recentMutes.Count > 5 && mute.Muter != "384a029294fc445e863f2c42fe9709cb")
             throw new ApiException("too_many_mutes", "You have muted too many people recently");
         var muteText = mute.Message + mute.Reason;
         if (muteText.Contains("rule ") || mute.Expires == default)
@@ -189,6 +189,7 @@ public class MuteProducer : IMuteService
     IConfiguration config;
     private IPlayerNameApi playerNameApi;
     private KafkaCreator kafkaCreator;
+    static bool createdTopic = false;
     public MuteProducer(IConfiguration config, IPlayerNameApi playerNameApi, KafkaCreator kafkaCreator)
     {
         this.config = config;
@@ -207,7 +208,11 @@ public class MuteProducer : IMuteService
     private async Task ProduceMessage(string message)
     {
         using var producer = GetProducer();
-        await kafkaCreator.CreateTopicIfNotExist(config["TOPICS:DISCORD_MESSAGE"]);
+        if (!createdTopic)
+        {
+            createdTopic = true;
+            await kafkaCreator.CreateTopicIfNotExist(config["TOPICS:DISCORD_MESSAGE"]);
+        }
         await producer.ProduceAsync(config["TOPICS:DISCORD_MESSAGE"], new() { Value = JsonConvert.SerializeObject(new { message, channel = "mutes" }) }).ConfigureAwait(false);
     }
 
