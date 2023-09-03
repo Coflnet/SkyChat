@@ -113,7 +113,7 @@ public class MuteService : IMuteService
             throw new ApiException("invalid_mute", "The mute was null");
         ArgumentException.ThrowIfNullOrEmpty(mute.Uuid, nameof(mute.Uuid));
         var client = backgroundService.GetClient(clientToken);
-        if (client.Name.Contains("tfm"))
+        if (client.Name.Contains("tfm") && mute.Message.Contains("AUTOMUTE"))
             return mute;
         mute.ClientId = client.Id;
         var minTime = DateTime.Now - TimeSpan.FromHours(6);
