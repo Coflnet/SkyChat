@@ -126,6 +126,8 @@ public class MuteService : IMuteService
             // rule violation
             var mutes = await db.Mute.Where(u => u.Uuid == mute.Uuid && !u.Status.HasFlag(MuteStatus.CANCELED)).ToListAsync();
             var firstMessage = await db.Messages.Where(u => u.Sender == mute.Uuid).OrderBy(m => m.Id).FirstOrDefaultAsync();
+            if (firstMessage == null)
+                throw new ApiException("invalid_mute", "The user has no previous messages");
             double nextLength = GetMuteTime(mutes, firstMessage.Timestamp);
             mute.Expires = DateTime.UtcNow + TimeSpan.FromHours(nextLength);
         }

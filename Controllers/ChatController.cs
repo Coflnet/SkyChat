@@ -84,7 +84,6 @@ namespace Coflnet.Sky.Chat.Controllers
             {
                 await s.MuteUser(mute, authorization);
             });
-            //await Task.WhenAll(muteServices.Select(s => s.MuteUser(mute, authorization)));
             return mute;
         }
         /// <summary>
