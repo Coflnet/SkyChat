@@ -60,7 +60,8 @@ namespace Coflnet.Sky.Chat
             // Replace 'YourDbContext' with the name of your own DbContext derived class.
             services.AddDbContext<ChatDbContext>(
                 dbContextOptions => dbContextOptions
-                    .UseMySql(Configuration["DB_CONNECTION"], serverVersion)
+                    .UseMySql(Configuration["DB_CONNECTION"], serverVersion, mySqlOptions => mySqlOptions
+                        .EnableRetryOnFailure(5).CommandTimeout(5))
                     .EnableSensitiveDataLogging() // <-- These two calls are optional but help
                     .EnableDetailedErrors()       // <-- with debugging (remove for production).
             );
