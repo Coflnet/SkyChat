@@ -107,7 +107,7 @@ public class ChatService
         Console.WriteLine($"Sent message to {response} clients");
         db.Messages.Add(dbMessage);
         await db.SaveChangesAsync();
-        _ = Task.Run(async () => await backgroundService.SendWebhooks(message));
+        _ = Task.Run(async () => await backgroundService.SendWebhooks(message).ConfigureAwait(false));
         messagesSent.Inc();
         return true;
     }
@@ -117,7 +117,7 @@ public class ChatService
         var tries = 0;
         while (string.IsNullOrEmpty(message.Name))
         {
-            var result = await playerNameApi.PlayerNameNameUuidGetAsync(message.Uuid);
+            var result = await playerNameApi.PlayerNameNameUuidGetAsync(message.Uuid).ConfigureAwait(false);
             message.Name = result;
             if (tries++ > 3)
             {

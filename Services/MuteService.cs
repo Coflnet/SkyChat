@@ -12,6 +12,7 @@ using Confluent.Kafka;
 using Microsoft.Extensions.Logging;
 using Coflnet.Sky.PlayerName.Client.Api;
 using Coflnet.Kafka;
+using System.Collections.Concurrent;
 
 namespace Coflnet.Sky.Chat.Services;
 
@@ -94,6 +95,7 @@ public class MuteService : IMuteService
 {
     private ChatDbContext db;
     private ChatBackgroundService backgroundService;
+    private ConcurrentDictionary<string,Mute> muteCache = new ConcurrentDictionary<string, Mute>();
 
     public MuteService(ChatDbContext db, ChatBackgroundService backgroundService)
     {
@@ -133,7 +135,25 @@ public class MuteService : IMuteService
         }
         db.Add(mute);
         await db.SaveChangesAsync();
+        await UpdateMuteCache();
         return mute;
+    }
+
+    private async Task UpdateMuteCache()
+    {
+        var allMutes = await db.Mute.Where(u => u.Expires > DateTime.UtcNow && !u.Status.HasFlag(MuteStatus.CANCELED)).ToListAsync();
+        // put longest mutes in cache
+        muteCache.Clear();
+        foreach (var item in allMutes)
+        {
+            if (muteCache.TryGetValue(item.Uuid, out var currentMute))
+            {
+                if (currentMute.Expires < item.Expires)
+                    muteCache[item.Uuid] = item;
+            }
+            else
+                muteCache[item.Uuid] = item;
+        }
     }
 
     public static double GetMuteTime(List<Mute> mutes, DateTime firstMessageTime)
@@ -163,6 +183,7 @@ public class MuteService : IMuteService
             throw new ApiException("no_mute_found", $"There was no active mute for the user {unmute.Uuid}");
 
         await DisableMute(unmute, client, mute);
+        await UpdateMuteCache();
         return unmute;
     }
 
@@ -173,6 +194,14 @@ public class MuteService : IMuteService
     /// <returns></returns>
     public async Task<Mute> GetMute(string uuid)
     {
+        if(muteCache.Count == 0)
+            await UpdateMuteCache();
+        if(muteCache.TryGetValue(uuid, out var mute))
+        {
+            if (mute.Expires > DateTime.UtcNow && !mute.Status.HasFlag(MuteStatus.CANCELED))
+                return mute;
+        }
+        return null;
         return await db.Mute.Where(u => u.Uuid == uuid && u.Expires > DateTime.UtcNow && !u.Status.HasFlag(MuteStatus.CANCELED)).OrderByDescending(m => m.Expires).FirstOrDefaultAsync();
     }
 
