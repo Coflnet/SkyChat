@@ -35,19 +35,19 @@ namespace Coflnet.Sky.Chat.Controllers
         }
 
         /// <summary>
-        /// Tracks a flip
+        /// Sends a message
         /// </summary>
-        /// <param name="flip"></param>
+        /// <param name="msg"></param>
         /// <param name="authorization"></param>
         /// <returns></returns>
         [HttpPost]
         [Route("send")]
         [ProducesResponseType(typeof(ErrorResponse), 400)]
-        public async Task<ChatMessage> SendMessage([FromBody] ChatMessage flip, [FromHeader] string authorization)
+        public async Task<ChatMessage> SendMessage([FromBody] ChatMessage msg, [FromHeader] string authorization)
         {
             AssertAuthHeader(authorization);
-            await service.SendMessage(flip, authorization);
-            return flip;
+            await service.SendMessage(msg, authorization);
+            return msg;
         }
 
         private static void AssertAuthHeader(string authorization)

@@ -10,6 +10,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
 using Coflnet.Sky.PlayerName.Client.Api;
+using System.Diagnostics;
 
 namespace Coflnet.Sky.Chat.Services;
 
@@ -22,6 +23,7 @@ public class ChatService
     private ConnectionMultiplexer connection;
     private ChatBackgroundService backgroundService;
     private IPlayerNameApi playerNameApi;
+    private ActivitySource activitySource;
     private static ConcurrentQueue<DbMessage> recentMessages = new ConcurrentQueue<DbMessage>();
     static HashSet<string> BadWords = new() { " cock ", "penis ", " ass ", "b.com", "/auction", "@everyone", "@here", " retard", " qf ", " kys ", "nigger ", "nigga ", " fag ", "faggot", "quickerflipper",
         "my ah", "/ah ", " im selling", "i am selling"
@@ -41,13 +43,15 @@ public class ChatService
     /// <param name="emojiService"></param>
     /// <param name="muteService"></param>
     /// <param name="playerNameApi"></param>
+    /// <param name="activitySource"></param>
     public ChatService(ChatDbContext db,
         ConnectionMultiplexer connection,
         ChatBackgroundService backgroundService,
         ILogger<ChatService> logger,
         EmojiService emojiService,
         MuteService muteService,
-        IPlayerNameApi playerNameApi)
+        IPlayerNameApi playerNameApi,
+        ActivitySource activitySource)
     {
         this.db = db;
         this.connection = connection;
@@ -56,6 +60,7 @@ public class ChatService
         this.emojiService = emojiService;
         this.muteService = muteService;
         this.playerNameApi = playerNameApi;
+        this.activitySource = activitySource;
     }
 
     /// <summary>
@@ -103,7 +108,7 @@ public class ChatService
         message.Message = emojiService.ReplaceIn(message.Message);
         var replaced = JsonConvert.SerializeObject(message);
         message.Message = original;
-        var response = await pubsub.PublishAsync("chat", replaced);
+        var response = await pubsub.PublishAsync("chat", replaced).ConfigureAwait(false);
         Console.WriteLine($"Sent message to {response} clients");
         db.Messages.Add(dbMessage);
         await db.SaveChangesAsync();
@@ -114,6 +119,7 @@ public class ChatService
 
     private async Task FillName(ChatMessage message)
     {
+        using var activity = activitySource.StartActivity("FillName");
         var tries = 0;
         while (string.IsNullOrEmpty(message.Name))
         {
@@ -137,6 +143,7 @@ public class ChatService
 
     private async Task AssertMessageSendable(ChatMessage message)
     {
+        using var activity = activitySource.StartActivity("AssertMessageSendable");
         Mute mute = await muteService.GetMute(message.Uuid);
         if (mute != default)
             throw new ApiException("user_muted", GetMuteMessage(mute));
