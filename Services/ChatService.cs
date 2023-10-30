@@ -71,6 +71,7 @@ public class ChatService
     /// <returns></returns>
     public async Task<bool> SendMessage(ChatMessage message, string clientToken)
     {
+        using var messageProcess = activitySource.StartActivity("SendMessage");
         var client = backgroundService.GetClient(clientToken);
         if (String.IsNullOrEmpty(message.Uuid))
             throw new ApiException("invalid_uuid", "The uuid of the sending player has to be set");
