@@ -38,7 +38,8 @@ namespace Coflnet.Sky.Chat
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddControllers().AddJsonOptions(o=>{
+            services.AddControllers().AddJsonOptions(o =>
+            {
                 // always serialize to UTC
                 o.JsonSerializerOptions.Converters.Add(new DateTimeConverter());
             });
@@ -70,7 +71,8 @@ namespace Coflnet.Sky.Chat
             services.AddJaeger(Configuration, 1);
             services.AddTransient<ChatService>();
             services.AddTransient<MuteService>();
-            services.AddTransient<IMuteService, MuteService>();
+            services.AddTransient<IMuteList, MuteService>(di => di.GetRequiredService<MuteService>());
+            services.AddTransient<IMuteService, MuteService>(di => di.GetRequiredService<MuteService>());
             services.AddTransient<IMuteService, TfmMuteService>();
             services.AddSingleton<IMuteService, MuteProducer>();
             services.AddSingleton<EmojiService>();

@@ -22,16 +22,19 @@ namespace Coflnet.Sky.Chat.Controllers
     {
         private readonly ChatService service;
         private readonly IEnumerable<IMuteService> muteServices;
+        private readonly IMuteList muteList;
 
         /// <summary>
         /// Creates a new instance of <see cref="ChatController"/>
         /// </summary>
         /// <param name="service"></param>
         /// <param name="muteServices"></param>
-        public ChatController(ChatService service, IEnumerable<IMuteService> muteServices)
+        /// <param name="muteList"></param>
+        public ChatController(ChatService service, IEnumerable<IMuteService> muteServices, IMuteList muteList)
         {
             this.service = service;
             this.muteServices = muteServices;
+            this.muteList = muteList;
         }
 
         /// <summary>
@@ -85,6 +88,19 @@ namespace Coflnet.Sky.Chat.Controllers
                 await s.MuteUser(mute, authorization);
             });
             return mute;
+        }
+        /// <summary>
+        /// Get all active mutes 
+        /// </summary>
+        /// <param name="authorization"></param>
+        /// <returns></returns>
+        [HttpGet]
+        [Route("mutes")]
+        [ProducesResponseType(typeof(ErrorResponse), 400)]
+        public async Task<IEnumerable<Mute>> GetMutes([FromHeader] string authorization)
+        {
+            AssertAuthHeader(authorization);
+            return await muteList.GetMutes(authorization);
         }
         /// <summary>
         /// Create a new mute for an user

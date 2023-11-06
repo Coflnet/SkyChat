@@ -22,6 +22,11 @@ public interface IMuteService
     Task<UnMute> UnMuteUser(UnMute unmute, string clientToken);
 }
 
+public interface IMuteList
+{
+    Task<IEnumerable<Mute>> GetMutes(string authorization);
+}
+
 public class TfmMuteService : IMuteService
 {
     private ChatBackgroundService backgroundService;
@@ -91,16 +96,22 @@ public class TfmMuteService : IMuteService
     }
 }
 
-public class MuteService : IMuteService
+public class MuteService : IMuteService, IMuteList
 {
     private ChatDbContext db;
     private ChatBackgroundService backgroundService;
-    private ConcurrentDictionary<string,Mute> muteCache = new ConcurrentDictionary<string, Mute>();
+    private static ConcurrentDictionary<string, Mute> muteCache = new ConcurrentDictionary<string, Mute>();
 
     public MuteService(ChatDbContext db, ChatBackgroundService backgroundService)
     {
         this.db = db;
         this.backgroundService = backgroundService;
+    }
+
+    public Task<IEnumerable<Mute>> GetMutes(string authorization)
+    {
+        var _ = backgroundService.GetClient(authorization);
+        return Task.FromResult(muteCache.Values.AsEnumerable());
     }
 
     /// <summary>
@@ -194,9 +205,9 @@ public class MuteService : IMuteService
     /// <returns></returns>
     public async Task<Mute> GetMute(string uuid)
     {
-        if(muteCache.Count == 0)
+        if (muteCache.Count == 0)
             await UpdateMuteCache();
-        if(muteCache.TryGetValue(uuid, out var mute))
+        if (muteCache.TryGetValue(uuid, out var mute))
         {
             if (mute.Expires > DateTime.UtcNow && !mute.Status.HasFlag(MuteStatus.CANCELED))
                 return mute;
