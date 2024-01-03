@@ -25,7 +25,7 @@ public class ChatService
     private IPlayerNameApi playerNameApi;
     private ActivitySource activitySource;
     private static ConcurrentQueue<DbMessage> recentMessages = new ConcurrentQueue<DbMessage>();
-    static HashSet<string> BadWords = new() { " cock ", "penis ", " ass ", "b.com", "/auction", "@everyone", "@here", " retard", " qf ", " kys ", "nigger ", "nigga ", " fag ", "faggot", "quickerflipper",
+    static HashSet<string> BadWords = new() { " cock ", "penis ", " ass ", "b.com", "/auction", "@everyone", "@here", " retard", " qf ", " kys ", "nigger", "nigga", " fag ", "faggot", "quickerflipper",
         "my ah", "/ah ", " im selling", "i am selling"
      };
     static Prometheus.Counter messagesSent = Prometheus.Metrics.CreateCounter("sky_chat_messages_sent", "Count of messages distributed");
