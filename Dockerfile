@@ -1,4 +1,4 @@
-ARG dotnetversion=7.0
+ARG dotnetversion=8.0
 FROM mcr.microsoft.com/dotnet/sdk:${dotnetversion} as build
 WORKDIR /build
 RUN git clone --depth=1 https://github.com/Coflnet/HypixelSkyblock.git dev
@@ -15,7 +15,7 @@ COPY --from=build /artifact .
 
 ENV ASPNETCORE_URLS=http://+:8000
 
-RUN useradd --uid $(shuf -i 2000-65000 -n 1) app
-USER app
+RUN useradd --uid $(shuf -i 2000-65000 -n 1) app-user
+USER app-user
 
 ENTRYPOINT ["dotnet", "SkyChat.dll", "--hostBuilder:reloadConfigOnChange=false"]
