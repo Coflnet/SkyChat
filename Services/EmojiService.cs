@@ -45,7 +45,7 @@ namespace Coflnet.Sky.Chat.Services
             {":cute:", "§e(§a✿§e◠‿◠)"},
             {":dog:", "§6(ᵔᴥᵔ)"},
             {":fyou:", "§6┌∩┐(§4◣§c_§4◢§6)┌∩┐"},
-            {":angwyflip:", "§c(ノಠ益ಠ)ノ§f彡§7┻━┻"},
+            {":angryflip:", "§c(ノಠ益ಠ)ノ§f彡§7┻━┻"},
             {":snipe:", "§e︻デ═一"},
             {":cofl:", "§1C§6ofl§f"},
             {":preapi:", "§cpre api§f"},
@@ -91,7 +91,9 @@ namespace Coflnet.Sky.Chat.Services
             {":star32:", "§c❉"},
             {":star33:", "§c❊"},
             {":star34:", "§c❋"},
-            {":rich:", "§kiii §l§cRICH §kiii"}
+            {":rich:", "§kiii §l§cRICH §kiii"},
+            {":boop:", " §a( §b੭ ･ᴗ･ §a)§b੭§f"},
+            {":yay:", "§a(§b ﾟヮﾟ§a)§b/§f"}
         };
 
         public string ReplaceIn(string value)
