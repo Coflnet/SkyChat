@@ -211,6 +211,8 @@ public class MuteService : IMuteService, IMuteList
         {
             if (mute.Expires > DateTime.UtcNow && !mute.Status.HasFlag(MuteStatus.CANCELED))
                 return mute;
+            // mute exired
+            muteCache.TryRemove(uuid, out _);
         }
         return null;
         return await db.Mute.Where(u => u.Uuid == uuid && u.Expires > DateTime.UtcNow && !u.Status.HasFlag(MuteStatus.CANCELED)).OrderByDescending(m => m.Expires).FirstOrDefaultAsync();
