@@ -155,7 +155,7 @@ public class ChatService
         if (BadWords.Any(word => normalizedMsg.Contains(word)))
         {
             filterSkipAttempts.AddOrUpdate(message.Uuid, 1, (key, value) => value + 1);
-            if (filterSkipAttempts[message.Uuid] > 5)
+            if (filterSkipAttempts[message.Uuid] > 3)
             {
                 await muteService.MuteUser(new Mute()
                 {
@@ -166,6 +166,7 @@ public class ChatService
                     Muter = "chat-service",
                 }, clientToken);
                 filterSkipAttempts[message.Uuid] = 0;
+                filterSkipAttempts.Clear();
             }
             throw new ApiException("bad_words", "message contains bad words and was denied");
         }
