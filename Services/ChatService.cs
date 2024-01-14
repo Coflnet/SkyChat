@@ -25,6 +25,7 @@ public class ChatService
     private IPlayerNameApi playerNameApi;
     private ActivitySource activitySource;
     private static ConcurrentQueue<DbMessage> recentMessages = new ConcurrentQueue<DbMessage>();
+    ConcurrentDictionary<string, int> filterSkipAttempts = new();
     static HashSet<string> BadWords = new() { " cock ", "penis ", " ass ", "b.com", "/auction", "@everyone", "@here", " retard", " qf ", " kys ", "nigger", "nigga", " fag ", "faggot", "quickerflipper",
         "my ah", "/ah ", " im selling", "i am selling"
      };
@@ -93,7 +94,7 @@ public class ChatService
             recentMessages.TryDequeue(out _);
         try
         {
-            await AssertMessageSendable(message);
+            await AssertMessageSendable(message, clientToken);
         }
         catch (ApiException)
         {
@@ -142,18 +143,32 @@ public class ChatService
             throw new ApiException("message_spam", "Please don't send the same message twice");
     }
 
-    private async Task AssertMessageSendable(ChatMessage message)
+    private async Task AssertMessageSendable(ChatMessage message, string clientToken)
     {
         using var activity = activitySource.StartActivity("AssertMessageSendable");
         Mute mute = await muteService.GetMute(message.Uuid);
         if (mute != default)
             throw new ApiException("user_muted", GetMuteMessage(mute));
-        var normalizedMsg = ' ' + message.Message.ToLower() + ' ';
+        var normalizedMsg = ' ' + message.Message.ToLower().Replace("_", "").Replace("-", "") + ' ';
         if (normalizedMsg.Contains("my ah "))
-            throw new ApiException("illegal_script", "You shouldn't talk about your ah in the chat, that's considered advertising and not allowed");
+            throw new ApiException("rule_2", "You shouldn't talk about your ah in the chat, that's considered advertising and not allowed");
         if (BadWords.Any(word => normalizedMsg.Contains(word)))
+        {
+            filterSkipAttempts.AddOrUpdate(message.Uuid, 1, (key, value) => value + 1);
+            if (filterSkipAttempts[message.Uuid] > 5)
+            {
+                await muteService.MuteUser(new Mute()
+                {
+                    Expires = DateTime.UtcNow.AddMinutes(15),
+                    Message = "You violated the chat rules",
+                    Uuid = message.Uuid,
+                    Timestamp = DateTime.UtcNow,
+                    Muter = "chat-service",
+                }, clientToken);
+                filterSkipAttempts[message.Uuid] = 0;
+            }
             throw new ApiException("bad_words", "message contains bad words and was denied");
-
+        }
         if (normalizedMsg.Contains(".com") && !message.Message.Contains("sky.coflnet.com")
             || normalizedMsg.Contains(".net")
             || normalizedMsg.Contains(".gg")
