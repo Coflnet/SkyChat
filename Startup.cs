@@ -6,9 +6,6 @@ using Coflnet.Kafka;
 using Coflnet.Sky.Chat.Models;
 using Coflnet.Sky.Chat.Services;
 using Coflnet.Sky.Core;
-using Jaeger.Samplers;
-using Jaeger.Senders;
-using Jaeger.Senders.Thrift;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Hosting;
@@ -19,8 +16,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
-using OpenTracing;
-using OpenTracing.Util;
 using Prometheus;
 
 namespace Coflnet.Sky.Chat
