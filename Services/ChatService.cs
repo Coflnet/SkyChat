@@ -27,7 +27,7 @@ public class ChatService
     private static ConcurrentQueue<DbMessage> recentMessages = new ConcurrentQueue<DbMessage>();
     ConcurrentDictionary<string, int> filterSkipAttempts = new();
     static HashSet<string> BadWords = new() { " cock ", "penis ", " ass ", "b.com", "/auction", "@everyone", "@here", " retard", " qf ", " kys ", "nigger", "nigga", " fag ", "faggot", "quickerflipper",
-        "my ah", "/ah ", " im selling", "i am selling"
+        "my ah", "/ah ", " im selling", "i am selling", "selling cofl coins "
      };
     static Prometheus.Counter messagesSent = Prometheus.Metrics.CreateCounter("sky_chat_messages_sent", "Count of messages distributed");
     private ILogger<ChatService> Logger;
