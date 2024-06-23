@@ -93,7 +93,8 @@ namespace Coflnet.Sky.Chat.Services
             {":star34:", "§c❋"},
             {":rich:", "§kiii §l§cRICH §kiii"},
             {":boop:", " §a( §b੭ ･ᴗ･ §a)§b੭§f"},
-            {":yay:", "§a(§b ﾟヮﾟ§a)§b/§f"}
+            {":yay:", "§a(§b ﾟヮﾟ§a)§b/§f"},
+            {":gg:", "§6§lGG§r"},
         };
 
         public string ReplaceIn(string value)
