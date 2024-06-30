@@ -176,6 +176,8 @@ public class ChatService
             || normalizedMsg.Contains(".de")
             || normalizedMsg.Contains(".io"))
             throw new ApiException("link_found", "Please don't post links in global chat");
+        if(message.Message.Contains("https://sky.coflnet.com/authmod"))
+            throw new ApiException("auth_found", "Sharing your authorization link is not a good idea");
 
         if (normalizedMsg.Contains("binmaster"))
             throw new ApiException("illegal_script", "Binmaster violates the hypixel terms of service. Violating the TOS can get your account banned and wiped. Also writing about it in flipper chat gets you muted by TFM.");
