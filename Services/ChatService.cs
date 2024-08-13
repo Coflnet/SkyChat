@@ -170,7 +170,7 @@ public class ChatService
             }
             throw new ApiException("bad_words", "message contains bad words and was denied");
         }
-        if (normalizedMsg.Contains(".com") && !message.Message.Contains("sky.coflnet.com")
+        if (normalizedMsg.Contains(".com") && !message.Message.ToLower().Contains("coflnet")
             || normalizedMsg.Contains(".net")
             || normalizedMsg.Contains(".gg")
             || normalizedMsg.Contains(".de")
