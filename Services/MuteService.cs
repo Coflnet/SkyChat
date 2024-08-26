@@ -232,19 +232,30 @@ public class MuteProducer : IMuteService
 {
     IConfiguration config;
     private IPlayerNameApi playerNameApi;
-    private KafkaCreator kafkaCreator;
+    private Kafka.KafkaCreator kafkaCreator;
     static bool createdTopic = false;
-    public MuteProducer(IConfiguration config, IPlayerNameApi playerNameApi, KafkaCreator kafkaCreator)
+    ILogger<MuteProducer> logger;
+    public MuteProducer(IConfiguration config, IPlayerNameApi playerNameApi, Kafka.KafkaCreator kafkaCreator, ILogger<MuteProducer> logger)
     {
         this.config = config;
         this.playerNameApi = playerNameApi;
         this.kafkaCreator = kafkaCreator;
+        this.logger = logger;
     }
 
     public async Task<Mute> MuteUser(Mute mute, string clientToken)
     {
         string name = await GetName(mute.Uuid);
-        var message = $"🔇 User {name} was muted by {await GetName(mute.Muter)} for `{mute.Reason}` until <t:{new DateTimeOffset(mute.Expires).ToUnixTimeSeconds()}> message: {mute.Message}";
+        var until = "";
+        try
+        {
+            until = $" until <t:{new DateTimeOffset(mute.Expires).ToUnixTimeSeconds()}>";
+        }
+        catch (System.Exception e)
+        {
+            logger.LogInformation(e, "Could not get until time for mute");
+        }
+        var message = $"🔇 User {name} was muted by {await GetName(mute.Muter)} for `{mute.Reason}`{until} message: {mute.Message}";
         await ProduceMessage(message);
         return mute;
     }
@@ -257,7 +268,9 @@ public class MuteProducer : IMuteService
             createdTopic = true;
             await kafkaCreator.CreateTopicIfNotExist(config["TOPICS:DISCORD_MESSAGE"]);
         }
-        await producer.ProduceAsync(config["TOPICS:DISCORD_MESSAGE"], new() { Value = JsonConvert.SerializeObject(new { message, channel = "mutes" }) }).ConfigureAwait(false);
+        producer.Produce(config["TOPICS:DISCORD_MESSAGE"], new() { Value = JsonConvert.SerializeObject(new { message, channel = "mutes" }) });
+        // flush timeout after 2 seconds
+        producer.Flush(TimeSpan.FromSeconds(2));
     }
 
     /// <summary>

@@ -71,7 +71,7 @@ namespace Coflnet.Sky.Chat
             services.AddTransient<IMuteService, TfmMuteService>();
             services.AddSingleton<IMuteService, MuteProducer>();
             services.AddSingleton<EmojiService>();
-            services.AddSingleton<KafkaCreator>();
+            services.AddSingleton<Kafka.KafkaCreator>();
             services.AddSingleton<PlayerName.Client.Api.IPlayerNameApi>(sp =>
             {
                 return new PlayerName.Client.Api.PlayerNameApi(Configuration["PLAYERNAME_BASE_URL"]);
