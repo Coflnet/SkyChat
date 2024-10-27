@@ -170,7 +170,7 @@ public class MuteService : IMuteService, IMuteList
     public static double GetMuteTime(List<Mute> mutes, DateTime firstMessageTime)
     {
         var currentTime = 1;
-        foreach (var item in mutes)
+        foreach (var item in mutes.Where(m => m.Expires > DateTime.UtcNow - TimeSpan.FromDays(400)))
         {
             var text = (item.Reason + item.Message).ToLower();
             if (text.StartsWith("tfm"))
@@ -180,9 +180,7 @@ public class MuteService : IMuteService, IMuteList
             else if (text.Contains("rule 2"))
                 currentTime *= 3;
         }
-        var timeSinceJoin = firstMessageTime - DateTime.UtcNow;
-        var reduction = Math.Max(1, Math.Pow(0.7, timeSinceJoin.TotalDays / 30));
-        var nextLength = currentTime / (reduction);
+        var nextLength = currentTime;
         return Math.Max(nextLength, 1);
     }
 
