@@ -150,7 +150,7 @@ public class ChatService
         Mute mute = await muteService.GetMute(message.Uuid);
         if (mute != default)
             throw new ApiException("user_muted", GetMuteMessage(mute));
-        var normalizedMsg = ' ' + message.Message.ToLower().Replace("_", "").Replace("-", "") + ' ';
+        var normalizedMsg = ' ' + message.Message.ToLower().Replace("_", "").Replace("-", "").Replace(".","") + ' ';
         if (normalizedMsg.Contains("my ah "))
             throw new ApiException("rule_2", "You shouldn't talk about your ah in the chat, that's considered advertising and not allowed");
         if (BadWords.Any(word => normalizedMsg.Contains(word)))
