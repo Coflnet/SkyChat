@@ -9,6 +9,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Coflnet.Sky.Chat.Services;
 using Coflnet.Sky.Core;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Coflnet.Sky.Chat.Controllers
 {
@@ -80,6 +81,7 @@ namespace Coflnet.Sky.Chat.Controllers
         [HttpPost]
         [Route("mute")]
         [ProducesResponseType(typeof(ErrorResponse), 400)]
+        [Authorize("ApiToken")]
         public async Task<Mute> MuteUser([FromBody] Mute mute, [FromHeader] string authorization)
         {
             AssertAuthHeader(authorization);

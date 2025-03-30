@@ -38,6 +38,18 @@ namespace Coflnet.Sky.Chat
                 // always serialize to UTC
                 o.JsonSerializerOptions.Converters.Add(new DateTimeConverter());
             });
+            // add api token authorization
+            services.AddAuthorization(options =>
+            {
+                options.AddPolicy("ApiToken", policy =>
+                {
+                    policy.RequireAssertion(context =>
+                    {
+                        var token = context.User.FindFirst("ApiToken")?.Value;
+                        return token == Configuration["API_TOKEN"];
+                    });
+                });
+            });
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "SkyChat", Version = "v1" });
@@ -45,6 +57,30 @@ namespace Coflnet.Sky.Chat
                 var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
                 var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
                 c.IncludeXmlComments(xmlPath);
+                // document auth
+                c.AddSecurityDefinition("ApiToken", new OpenApiSecurityScheme
+                {
+                    Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
+                    Name = "Authorization",
+                    In = ParameterLocation.Header,
+                    Type = SecuritySchemeType.ApiKey,
+                    Scheme = "Bearer"
+                });
+
+                c.AddSecurityRequirement(new OpenApiSecurityRequirement
+                {
+                    {
+                        new OpenApiSecurityScheme
+                        {
+                            Reference = new OpenApiReference
+                            {
+                                Type = ReferenceType.SecurityScheme,
+                                Id = "ApiToken"
+                            }
+                        },
+                        new string[] {}
+                    }
+                });
             });
 
             // Replace with your server version and type.
