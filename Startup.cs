@@ -104,7 +104,6 @@ namespace Coflnet.Sky.Chat
             services.AddTransient<MuteService>();
             services.AddTransient<IMuteList, MuteService>(di => di.GetRequiredService<MuteService>());
             services.AddTransient<IMuteService, MuteService>(di => di.GetRequiredService<MuteService>());
-            services.AddTransient<IMuteService, TfmMuteService>();
             services.AddSingleton<IMuteService, MuteProducer>();
             services.AddSingleton<EmojiService>();
             services.AddSingleton<Kafka.KafkaCreator>();
