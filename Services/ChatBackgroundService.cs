@@ -105,7 +105,11 @@ namespace Coflnet.Sky.Chat.Services
                 };
                 request.Headers.Add("Authorization", hook.WebhookAuth);
 
-                await client.SendAsync(request);
+                var response = await client.SendAsync(request);
+                if(response.StatusCode == System.Net.HttpStatusCode.BadGateway)
+                {
+                    Clients.TryRemove(c);
+                }
             }));
         }
 
