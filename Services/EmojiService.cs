@@ -103,7 +103,7 @@ namespace Coflnet.Sky.Chat.Services
             {
                 if (!value.Contains(item.Key))
                     continue;
-                value = value.Replace(item.Key, item.Value);
+                value = value.Replace(item.Key, item.Value + "§r");
             }
             return value;
         }
