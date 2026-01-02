@@ -1,5 +1,5 @@
-ARG dotnetversion=8.0
-FROM mcr.microsoft.com/dotnet/sdk:${dotnetversion} as build
+ARG dotnetversion=10.0
+FROM mcr.microsoft.com/dotnet/sdk:${dotnetversion} AS build
 WORKDIR /build
 RUN git clone --depth=1 https://github.com/Coflnet/HypixelSkyblock.git dev
 WORKDIR /build/sky
