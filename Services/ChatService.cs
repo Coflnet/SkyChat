@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
 using Coflnet.Sky.PlayerName.Client.Api;
 using System.Diagnostics;
+using System.Globalization;
 
 namespace Coflnet.Sky.Chat.Services;
 
@@ -28,6 +29,7 @@ public class ChatService
     ConcurrentDictionary<string, int> filterSkipAttempts = new();
     static HashSet<string> BadWords = new() { " cock ", "penis ", " ass ", "b.com", "/auction", "@everyone", "@here", " retard", " qf ", " kys ", "nigger", "nigga", " fag ", "faggot", "quickerflipper",
         "my ah", "/ah ", " im selling", "i am selling", "selling cofl coins ",
+        "love femboy",
         "д","б", "л", "й", "п", "ь", "ж"
      };
     static Prometheus.Counter messagesSent = Prometheus.Metrics.CreateCounter("sky_chat_messages_sent", "Count of messages distributed");
