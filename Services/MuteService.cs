@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging;
 using Coflnet.Sky.PlayerName.Client.Api;
 using Coflnet.Kafka;
 using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
 
 namespace Coflnet.Sky.Chat.Services;
 
@@ -197,6 +198,8 @@ public class MuteProducer : IMuteService
             createdTopic = true;
             await kafkaCreator.CreateTopicIfNotExist(config["TOPICS:DISCORD_MESSAGE"]);
         }
+
+        message = Regex.Replace(message, @"§.", "");
         producer.Produce(config["TOPICS:DISCORD_MESSAGE"], new() { Value = JsonConvert.SerializeObject(new { message, channel = "mutes" }) });
         // flush timeout after 2 seconds
         producer.Flush(TimeSpan.FromSeconds(2));
