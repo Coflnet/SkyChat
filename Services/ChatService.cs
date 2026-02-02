@@ -27,7 +27,8 @@ public class ChatService
     private ActivitySource activitySource;
     private static ConcurrentQueue<DbMessage> recentMessages = new ConcurrentQueue<DbMessage>();
     ConcurrentDictionary<string, int> filterSkipAttempts = new();
-    static HashSet<string> BadWords = new() { " cock ", "penis ", " ass ", "b.com", "/auction", "@everyone", "@here", " retard", " qf ", " kys ", "nigger", "nigga", " fag ", "faggot", "quickerflipper",
+    static HashSet<string> BadWords = new() { " cock ", "penis ", " ass ", "b.com", "/auction", "@everyone", "@here", " retard", " qf ", " kys ",
+        "nigger", "niggger", "niger", "nigga", " fag ", "faggot", " fuck",
         "my ah", "/ah ", " im selling", "i am selling", "selling cofl coins ",
         "love femboy",
         "д","б", "л", "й", "п", "ь", "ж"
@@ -158,7 +159,7 @@ public class ChatService
         if (BadWords.Any(word => normalizedMsg.Contains(word)))
         {
             filterSkipAttempts.AddOrUpdate(message.Uuid, 1, (key, value) => value + 1);
-            if (filterSkipAttempts[message.Uuid] > 3)
+            if (filterSkipAttempts[message.Uuid] >= 3)
             {
                 await muteService.MuteUser(new Mute()
                 {
