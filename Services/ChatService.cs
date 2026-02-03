@@ -28,7 +28,7 @@ public class ChatService
     private static ConcurrentQueue<DbMessage> recentMessages = new ConcurrentQueue<DbMessage>();
     ConcurrentDictionary<string, int> filterSkipAttempts = new();
     static HashSet<string> BadWords = new() { " cock ", "penis ", " ass ", "b.com", "/auction", "@everyone", "@here", " retard", " qf ", " kys ",
-        "nigger", "niggger", "niger", "nigga", " fag ", "faggot", " fuck",
+        "nigger", "niggger", "niger", "nigga", " fag ", "faggot", "fuck you",
         "my ah", "/ah ", " im selling", "i am selling", "selling cofl coins ",
         "love femboy",
         "д","б", "л", "й", "п", "ь", "ж"
