@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Reflection;
@@ -67,18 +68,11 @@ namespace Coflnet.Sky.Chat
                     Scheme = "Bearer"
                 });
 
-                c.AddSecurityRequirement(new OpenApiSecurityRequirement
+                c.AddSecurityRequirement(doc => new OpenApiSecurityRequirement
                 {
                     {
-                        new OpenApiSecurityScheme
-                        {
-                            Reference = new OpenApiReference
-                            {
-                                Type = ReferenceType.SecurityScheme,
-                                Id = "ApiToken"
-                            }
-                        },
-                        new string[] {}
+                        new OpenApiSecuritySchemeReference("ApiToken"),
+                        new List<string>()
                     }
                 });
             });
