@@ -95,6 +95,7 @@ namespace Coflnet.Sky.Chat.Services
             {":boop:", " §a( §b੭ ･ᴗ･ §a)§b੭§f"},
             {":yay:", "§a(§b ﾟヮﾟ§a)§b/§f"},
             {":gg:", "§6§lGG§r"},
+            {":67:", "§6⁶§f🤷§7⁷"},
         };
 
         public string ReplaceIn(string value)
