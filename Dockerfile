@@ -6,16 +6,20 @@ WORKDIR /build/sky
 COPY SkyChat.csproj SkyChat.csproj
 RUN dotnet restore
 COPY . .
-RUN dotnet publish -c release -o /artifact
+RUN dotnet publish -c release -o /app /p:UseAppHost=false /p:PublishReadyToRun=true
 
-FROM mcr.microsoft.com/dotnet/aspnet:${dotnetversion}
+FROM mcr.microsoft.com/dotnet/aspnet:${dotnetversion}-noble-chiseled-extra
 WORKDIR /app
 
-COPY --from=build /artifact .
+COPY --from=build --chown=$APP_UID:$APP_UID /app .
 
-ENV ASPNETCORE_URLS=http://+:8000
+ENV ASPNETCORE_URLS=http://+:8000 \
+    DOTNET_EnableDiagnostics=0 \
+    COMPlus_EnableDiagnostics=0 \
+    DOTNET_RUNNING_IN_CONTAINER=true \
+    HOME=/tmp \
+    TMPDIR=/tmp
 
-RUN useradd --uid $(shuf -i 2000-65000 -n 1) app-user
-USER app-user
+USER $APP_UID
 
 ENTRYPOINT ["dotnet", "SkyChat.dll", "--hostBuilder:reloadConfigOnChange=false"]
