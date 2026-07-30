@@ -9,11 +9,11 @@ using System.Linq;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System;
-using System.Collections.Generic;
 using System.Net.Http;
 using Newtonsoft.Json;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Linq.Expressions;
 
 namespace Coflnet.Sky.Chat.Services
 {
@@ -26,7 +26,7 @@ namespace Coflnet.Sky.Chat.Services
         private Prometheus.Counter consumeCount = Prometheus.Metrics.CreateCounter("sky_chat_conume", "How many messages were consumed");
 
         private ConcurrentDictionary<string, ModelClient> Clients = new();
-        private List<(string WebHook, string WebhookAuth)> Webhooks = new();
+        internal const int MaximumModerationQuoteRetentionHours = 96;
 
         public bool Ready => Clients.Count > 0;
 
@@ -45,11 +45,6 @@ namespace Coflnet.Sky.Chat.Services
             return client;
         }
 
-        internal ModelClient GetClientByName(string clientName)
-        {
-            return Clients.Values.Where(c => c.Name == clientName).FirstOrDefault();
-        }
-
         /// <summary>
         /// Called by asp.net on startup
         /// </summary>
@@ -65,8 +60,33 @@ namespace Coflnet.Sky.Chat.Services
 
             while (!stoppingToken.IsCancellationRequested)
             {
+                var now = DateTime.UtcNow;
+                var sanctionCutoff = now
+                    - TimeSpan.FromDays(MuteService.RepeatSanctionWindowDays);
+                var sanctionsDeleted = await context.Mute
+                    .Where(ExpiredSanctionOutsideRepeatWindow(sanctionCutoff))
+                    .ExecuteDeleteAsync(stoppingToken);
+                if (sanctionsDeleted > 0)
+                    logger.LogInformation(
+                        "Deleted {Count} expired sanctions outside the repeat-sanction window",
+                        sanctionsDeleted);
+
+                var quoteRetention = GetModerationQuoteRetention(
+                    config["MODERATION_QUOTE_RETENTION_HOURS"]);
+                var quoteCutoff = now - quoteRetention;
+                var redacted = await context.Mute
+                    .Where(QuotedEvidenceExpired(quoteCutoff))
+                    .ExecuteUpdateAsync(
+                        setters => setters
+                            .SetProperty(m => m.Message, (string)null)
+                            .SetProperty(m => m.Reason, (string)null),
+                        stoppingToken);
+                if (redacted > 0)
+                    logger.LogInformation(
+                        "Redacted quoted moderation evidence from {Count} sanctions",
+                        redacted);
+                MuteService.RedactCachedEvidence(quoteCutoff);
                 Clients = new ConcurrentDictionary<string, ModelClient>(await context.Clients.ToDictionaryAsync(c => c.ApiKey));
-                //Webhooks = Clients.Select(c => (c.Value.WebHook, c.Value.WebhookAuth, c)).Where(w => !string.IsNullOrEmpty(w.WebHook)).ToList();
                 await Task.Delay(TimeSpan.FromMinutes(10), stoppingToken);
 
             }
@@ -75,29 +95,19 @@ namespace Coflnet.Sky.Chat.Services
 
         internal async Task SendWebhooks(ChatMessage message)
         {
-            var client = new HttpClient();
+            var webhookClients = Clients
+                .Where(c => IsWebhookAllowed(c.Value))
+                .ToArray();
+            if (webhookClients.Length == 0)
+                return;
+
+            using var client = new HttpClient();
             message.Message = Regex.Replace(message.Message, @"§.", "");
             var serialized = JsonConvert.SerializeObject(message);
-            await Task.WhenAll(Clients.Select(async c =>
+            await Task.WhenAll(webhookClients.Select(async c =>
             {
                 var hook = c.Value;
                 var content = new StringContent(serialized, Encoding.UTF8, "application/json");
-
-                if (c.Value.Name.Contains("tfm"))
-                {
-                    if (message.ClientName.Contains("tfm"))
-                        return;
-                    var msg = Regex.Replace(LeetSpeakConverter.Normalize(message.Message.ToLower()), @"[^a-z]", "");
-                    if (msg.Contains("kys") || msg.Contains("fag") || msg.Contains("retard"))
-                        return; // automute mutes that for a long time
-                    content = new StringContent(JsonConvert.SerializeObject(new
-                    {
-                        uuid = message.Uuid,
-                        isPremium = true,
-                        message = message.Message,
-                        apiKey = c.Value.WebhookAuth
-                    }), Encoding.UTF8, "application/json");
-                }
 
                 var request = new HttpRequestMessage(HttpMethod.Post, hook.WebHook)
                 {
@@ -111,6 +121,36 @@ namespace Coflnet.Sky.Chat.Services
                     Clients.TryRemove(c);
                 }
             }));
+        }
+
+        internal static TimeSpan GetModerationQuoteRetention(string configuredHours)
+        {
+            if (!int.TryParse(configuredHours, out var hours) || hours < 1)
+                hours = MaximumModerationQuoteRetentionHours;
+            return TimeSpan.FromHours(
+                Math.Min(hours, MaximumModerationQuoteRetentionHours));
+        }
+
+        internal static Expression<Func<Mute, bool>> QuotedEvidenceExpired(
+            DateTime cutoff)
+        {
+            return mute => mute.Timestamp < cutoff
+                && (mute.Message != null || mute.Reason != null);
+        }
+
+        internal static Expression<Func<Mute, bool>>
+            ExpiredSanctionOutsideRepeatWindow(DateTime cutoff)
+        {
+            return mute => mute.Expires <= cutoff;
+        }
+
+        internal static bool IsWebhookAllowed(ModelClient client)
+        {
+            return client != null
+                && !string.IsNullOrWhiteSpace(client.WebHook)
+                && !string.IsNullOrWhiteSpace(client.WebhookAuth)
+                && Uri.TryCreate(client.WebHook, UriKind.Absolute, out var uri)
+                && uri.Scheme == Uri.UriSchemeHttps;
         }
 
         private ChatService GetService()

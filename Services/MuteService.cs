@@ -4,7 +4,6 @@ using Coflnet.Sky.Chat.Models;
 using System.Linq;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
-using RestSharp;
 using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.Configuration;
@@ -30,6 +29,7 @@ public interface IMuteList
 
 public class MuteService : IMuteService, IMuteList
 {
+    internal const int RepeatSanctionWindowDays = 400;
     private ChatDbContext db;
     private ChatBackgroundService backgroundService;
     private static ConcurrentDictionary<string, Mute> muteCache = new ConcurrentDictionary<string, Mute>();
@@ -58,22 +58,18 @@ public class MuteService : IMuteService, IMuteList
             throw new ApiException("invalid_mute", "The mute was null");
         ArgumentException.ThrowIfNullOrEmpty(mute.Uuid, nameof(mute.Uuid));
         var client = backgroundService.GetClient(clientToken);
-        if (client.Name.Contains("tfm") && mute.Message.Contains("AUTOMUTE"))
-            return mute;
         mute.ClientId = client.Id;
         var minTime = DateTime.Now - TimeSpan.FromHours(6);
         var recentMutes = await db.Mute.Where(u => u.Muter == mute.Muter && !u.Status.HasFlag(MuteStatus.CANCELED) && u.Timestamp > minTime).ToListAsync();
         if (recentMutes.Count > 5 && mute.Muter != "384a029294fc445e863f2c42fe9709cb")
             throw new ApiException("too_many_mutes", "You have muted too many people recently");
-        var muteText = mute.Message + mute.Reason;
-        if (muteText.Contains("rule ") || mute.Expires == default)
+        if (mute.Rule != MuteRule.NONE || mute.Expires == default)
         {
             // rule violation
             var mutes = await db.Mute.Where(u => u.Uuid == mute.Uuid && !u.Status.HasFlag(MuteStatus.CANCELED)).ToListAsync();
-            var firstMessage = await db.Messages.Where(u => u.Sender == mute.Uuid).OrderBy(m => m.Id).FirstOrDefaultAsync();
-            if (firstMessage == null)
+            if (!await db.Messages.AnyAsync(u => u.Sender == mute.Uuid))
                 throw new ApiException("invalid_mute", "The user has no previous messages");
-            double nextLength = GetMuteTime(mutes, firstMessage.Timestamp);
+            double nextLength = GetMuteTime(mutes);
             mute.Expires = DateTime.UtcNow + TimeSpan.FromHours(nextLength);
         }
         db.Add(mute);
@@ -99,21 +95,39 @@ public class MuteService : IMuteService, IMuteList
         }
     }
 
-    public static double GetMuteTime(List<Mute> mutes, DateTime firstMessageTime)
+    public static double GetMuteTime(List<Mute> mutes)
     {
         var currentTime = 1;
-        foreach (var item in mutes.Where(m => m.Expires > DateTime.UtcNow - TimeSpan.FromDays(400)))
+        var cutoff = DateTime.UtcNow
+            - TimeSpan.FromDays(RepeatSanctionWindowDays);
+        foreach (var item in mutes.Where(m => m.Expires > cutoff))
         {
-            var text = (item.Reason + item.Message).ToLower();
-            if (text.StartsWith("tfm"))
-                continue;
-            if (text.Contains("rule 1"))
+            if (item.Rule == MuteRule.BE_NICE)
                 currentTime *= 10;
-            else if (text.Contains("rule 2"))
+            else if (item.Rule == MuteRule.NO_UNSOLICITED_ADVERTISING)
                 currentTime *= 3;
         }
-        var nextLength = currentTime;
-        return Math.Max(nextLength, 1);
+        return currentTime;
+    }
+
+    internal static MuteRule GetRule(Mute mute)
+    {
+        if (mute.Rule != MuteRule.NONE)
+            return mute.Rule;
+        if (mute.Reason?.StartsWith("1 ", StringComparison.Ordinal) == true)
+            return MuteRule.BE_NICE;
+        if (mute.Reason?.StartsWith("2 ", StringComparison.Ordinal) == true)
+            return MuteRule.NO_UNSOLICITED_ADVERTISING;
+        return MuteRule.NONE;
+    }
+
+    internal static void RedactCachedEvidence(DateTime cutoff)
+    {
+        foreach (var mute in muteCache.Values.Where(m => m.Timestamp < cutoff))
+        {
+            mute.Message = null;
+            mute.Reason = null;
+        }
     }
 
     public async Task<UnMute> UnMuteUser(UnMute unmute, string clientToken)
@@ -145,7 +159,6 @@ public class MuteService : IMuteService, IMuteList
             muteCache.TryRemove(uuid, out _);
         }
         return null;
-        return await db.Mute.Where(u => u.Uuid == uuid && u.Expires > DateTime.UtcNow && !u.Status.HasFlag(MuteStatus.CANCELED)).OrderByDescending(m => m.Expires).FirstOrDefaultAsync();
     }
 
     private async Task DisableMute(UnMute unmute, ModelClient client, Mute mute)
@@ -176,6 +189,13 @@ public class MuteProducer : IMuteService
     public async Task<Mute> MuteUser(Mute mute, string clientToken)
     {
         string name = await GetName(mute.Uuid);
+        var rule = mute.Rule switch
+        {
+            MuteRule.BE_NICE => "rule 1 (be nice)",
+            MuteRule.NO_UNSOLICITED_ADVERTISING =>
+                "rule 2 (do not advertise unless asked)",
+            _ => "a chat rule"
+        };
         var until = "";
         try
         {
@@ -185,7 +205,8 @@ public class MuteProducer : IMuteService
         {
             logger.LogInformation(e, "Could not get until time for mute");
         }
-        var message = $"🔇 User {name} was muted by {await GetName(mute.Muter)} for `{mute.Reason}`{until} message: {mute.Message}";
+        var message =
+            $"🔇 User {name} was muted by {await GetName(mute.Muter)} for `{rule}`{until}";
         await ProduceMessage(message);
         return mute;
     }
@@ -214,7 +235,8 @@ public class MuteProducer : IMuteService
     public async Task<UnMute> UnMuteUser(UnMute unmute, string clientToken)
     {
         string name = await GetName(unmute.Uuid);
-        var message = $"🔈 User {name} was unmuted by {await GetName(unmute.UnMuter)} for `{unmute.Reason}`";
+        var message =
+            $"🔈 User {name} was unmuted by {await GetName(unmute.UnMuter)}";
         await ProduceMessage(message);
         return unmute;
     }

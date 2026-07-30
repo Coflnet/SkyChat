@@ -10,6 +10,9 @@ using System.Collections.Generic;
 using Coflnet.Sky.Chat.Services;
 using Coflnet.Sky.Core;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Configuration;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Coflnet.Sky.Chat.Controllers
 {
@@ -24,6 +27,7 @@ namespace Coflnet.Sky.Chat.Controllers
         private readonly ChatService service;
         private readonly IEnumerable<IMuteService> muteServices;
         private readonly IMuteList muteList;
+        private readonly IConfiguration configuration;
 
         /// <summary>
         /// Creates a new instance of <see cref="ChatController"/>
@@ -31,11 +35,17 @@ namespace Coflnet.Sky.Chat.Controllers
         /// <param name="service"></param>
         /// <param name="muteServices"></param>
         /// <param name="muteList"></param>
-        public ChatController(ChatService service, IEnumerable<IMuteService> muteServices, IMuteList muteList)
+        /// <param name="configuration"></param>
+        public ChatController(
+            ChatService service,
+            IEnumerable<IMuteService> muteServices,
+            IMuteList muteList,
+            IConfiguration configuration)
         {
             this.service = service;
             this.muteServices = muteServices;
             this.muteList = muteList;
+            this.configuration = configuration;
         }
 
         /// <summary>
@@ -64,11 +74,16 @@ namespace Coflnet.Sky.Chat.Controllers
         /// Create a nw Client
         /// </summary>
         /// <param name="client"></param>
+        /// <param name="adminToken"></param>
         /// <returns></returns>
         [HttpPost]
         [Route("internal/client")]
-        public async Task<CientCreationResponse> CreateClient([FromBody] ModelClient client)
+        public async Task<ActionResult<CientCreationResponse>> CreateClient(
+            [FromBody] ModelClient client,
+            [FromHeader(Name = "X-Chat-Admin-Token")] string adminToken)
         {
+            if (!HasValidDeletionToken(configuration["CLIENT_ADMIN_TOKEN"], adminToken))
+                return NotFound();
             return new CientCreationResponse(await service.CreateClient(client));
         }
 
@@ -85,6 +100,8 @@ namespace Coflnet.Sky.Chat.Controllers
         public async Task<Mute> MuteUser([FromBody] Mute mute, [FromHeader] string authorization)
         {
             AssertAuthHeader(authorization);
+            if (mute != null)
+                mute.Rule = MuteService.GetRule(mute);
             await Parallel.ForEachAsync(muteServices, async (s,c) =>
             {
                 await s.MuteUser(mute, authorization);
@@ -119,5 +136,47 @@ namespace Coflnet.Sky.Chat.Controllers
             await Task.WhenAll(muteServices.Select(s => s.UnMuteUser(mute, authorization)));
             return mute;
         }
+
+        /// <summary>
+        /// Deletes stored public-chat messages for a verified Minecraft account.
+        /// This internal endpoint must be called only after the account-facing
+        /// service has authenticated the requester and resolved the linked UUID.
+        /// </summary>
+        [HttpDelete]
+        [Route("messages/user/{uuid}")]
+        [ProducesResponseType(typeof(UserMessageDeletionResult), 200)]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(404)]
+        public async Task<ActionResult<UserMessageDeletionResult>> DeleteUserMessages(
+            string uuid,
+            [FromHeader(Name = "X-Chat-Deletion-Token")] string deletionToken)
+        {
+            if (!HasValidDeletionToken(configuration["MESSAGE_DELETION_TOKEN"], deletionToken))
+                return NotFound();
+            if (!Guid.TryParseExact(uuid, "N", out var parsedUuid))
+                return BadRequest("uuid must be a canonical 32-character Minecraft UUID");
+
+            var canonicalUuid = parsedUuid.ToString("N");
+            var (messagesDeleted, reportsDeleted) =
+                await service.DeleteUserMessages(canonicalUuid);
+            return Ok(new UserMessageDeletionResult(
+                canonicalUuid,
+                messagesDeleted,
+                reportsDeleted));
+        }
+
+        internal static bool HasValidDeletionToken(string expected, string supplied)
+        {
+            var expectedBytes = Encoding.UTF8.GetBytes(expected ?? "");
+            var suppliedBytes = Encoding.UTF8.GetBytes(supplied ?? "");
+            return expectedBytes.Length >= 32
+                && expectedBytes.Length == suppliedBytes.Length
+                && CryptographicOperations.FixedTimeEquals(expectedBytes, suppliedBytes);
+        }
     }
+
+    public record UserMessageDeletionResult(
+        string Uuid,
+        int MessagesDeleted,
+        int ReportsDeleted);
 }

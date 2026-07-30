@@ -49,6 +49,12 @@ namespace Coflnet.Sky.Chat.Models
         [DataMember(Name = "reason")]
         public string Reason { get; set; }
         /// <summary>
+        /// Normalized rule used for repeat-sanction calculation after quoted
+        /// message content has been removed.
+        /// </summary>
+        [DataMember(Name = "rule")]
+        public MuteRule Rule { get; set; }
+        /// <summary>
         /// What client software added the mute
         /// </summary>
         /// <value></value>
@@ -88,6 +94,13 @@ namespace Coflnet.Sky.Chat.Models
         FILTER = 4,
         MUTE = 8,
         CANCELED = 16
+    }
+
+    public enum MuteRule
+    {
+        NONE,
+        BE_NICE,
+        NO_UNSOLICITED_ADVERTISING
     }
 
     public class UnMute

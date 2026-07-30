@@ -88,8 +88,6 @@ namespace Coflnet.Sky.Chat
                 dbContextOptions => dbContextOptions
                     .UseMySql(Configuration["DB_CONNECTION"], serverVersion, mySqlOptions => mySqlOptions
                         .EnableRetryOnFailure(5).CommandTimeout(5))
-                    .EnableSensitiveDataLogging() // <-- These two calls are optional but help
-                    .EnableDetailedErrors()       // <-- with debugging (remove for production).
             );
             services.AddSingleton<ChatBackgroundService>();
             services.AddHostedService<ChatBackgroundService>(di => di.GetRequiredService<ChatBackgroundService>());

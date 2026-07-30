@@ -34,6 +34,12 @@ public class ChatService
         "д","б", "л", "й", "п", "ь", "ж"
      };
     static Prometheus.Counter messagesSent = Prometheus.Metrics.CreateCounter("sky_chat_messages_sent", "Count of messages distributed");
+    /// <summary>
+    /// Sentinel <see cref="Mute.Muter"/> value used for mutes issued by the automated
+    /// repeat-offender chat filter (see <see cref="AssertMessageSendable"/>), as opposed to
+    /// mutes issued by a human moderator (which carry the moderator's Minecraft uuid).
+    /// </summary>
+    internal const string AutomatedFilterMuterId = "chat-service";
     private ILogger<ChatService> Logger;
     private EmojiService emojiService;
     private MuteService muteService;
@@ -167,7 +173,7 @@ public class ChatService
                     Message = "You violated the chat rules",
                     Uuid = message.Uuid,
                     Timestamp = DateTime.UtcNow,
-                    Muter = "chat-service",
+                    Muter = AutomatedFilterMuterId,
                 }, clientToken);
                 filterSkipAttempts[message.Uuid] = 0;
                 filterSkipAttempts.Clear();
@@ -184,14 +190,64 @@ public class ChatService
             throw new ApiException("auth_found", "Sharing your authorization link is not a good idea");
 
         if (normalizedMsg.Contains("binmaster"))
-            throw new ApiException("illegal_script", "Binmaster violates the hypixel terms of service. Violating the TOS can get your account banned and wiped. Also writing about it in flipper chat gets you muted by TFM.");
+            throw new ApiException("illegal_script", "Binmaster violates the hypixel terms of service. Violating the TOS can get your account banned and wiped.");
     }
 
-    private static string GetMuteMessage(Mute mute)
+    /// <summary>
+    /// Builds the DSA Art. 17 compliant "statement of reasons" shown to a muted user.
+    /// Covers: (1) nature/scope/duration of the restriction, (2) the specific rule violated
+    /// plus, if not yet redacted by <see cref="ChatBackgroundService"/>, the message that
+    /// triggered it, (3) whether the decision was automated or taken by a human moderator
+    /// (derived from <see cref="Mute.Muter"/>, see <see cref="AutomatedFilterMuterId"/>),
+    /// and (4) how to request human review.
+    /// </summary>
+    internal static string GetMuteMessage(Mute mute)
     {
-        return $"You are muted until {mute.Expires.ToString("F")} ({(DateTime.UtcNow - mute.Expires).ToString("d'd 'h'h 'm'm 's's'")}) because {mute.Message ?? "you violated a rule"}";
+        var remaining = (DateTime.UtcNow - mute.Expires).ToString("d'd 'h'h 'm'm 's's'");
+        var (ruleNumber, ruleTitle) = DescribeRule(mute.Rule);
+        var ground = ruleNumber != null
+            ? $"rule {ruleNumber} (\"{ruleTitle}\")"
+            : "our chat rules";
+        // Message is redacted to null by ChatBackgroundService's 96h retention sweep,
+        // so quote it only while it is still available.
+        var quote = string.IsNullOrWhiteSpace(mute.Message)
+            ? string.Empty
+            : $" Message that triggered this: \"{mute.Message}\"";
+        var automationNotice = mute.Muter == AutomatedFilterMuterId
+            ? "This decision was taken automatically by our chat filter."
+            : "The mute was issued by a human moderator.";
+        return $"You are muted until {mute.Expires.ToString("F")} ({remaining}); this only restricts sending messages in the public chat. "
+            + $"Reason: you violated {ground}.{quote} "
+            + $"{automationNotice} "
+            + "You can ask for human review of this decision: support@coflnet.com. Your right to go to court is unaffected.";
     }
 
+    private static (string Number, string Title) DescribeRule(MuteRule rule) => rule switch
+    {
+        MuteRule.BE_NICE => ("1", "Be nice"),
+        MuteRule.NO_UNSOLICITED_ADVERTISING => ("2", "Do not advertise something nobody asked for"),
+        _ => (null, null)
+    };
+
+    /// <summary>
+    /// Deletes stored public-chat messages for one canonical Minecraft UUID.
+    /// Moderation sanctions remain separate records and are not removed here.
+    /// </summary>
+    public async Task<(int MessagesDeleted, int ReportsDeleted)> DeleteUserMessages(string uuid)
+    {
+        return await db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
+        {
+            await using var transaction = await db.Database.BeginTransactionAsync();
+            var reportsDeleted = await db.Reports
+                .Where(report => report.Message != null && report.Message.Sender == uuid)
+                .ExecuteDeleteAsync();
+            var messagesDeleted = await db.Messages
+                .Where(message => message.Sender == uuid)
+                .ExecuteDeleteAsync();
+            await transaction.CommitAsync();
+            return (messagesDeleted, reportsDeleted);
+        });
+    }
 
     /// <summary>
     /// Creates a new client, generates a new secure api key before saving it into the db
