@@ -1,3 +1,5 @@
+using Coflnet.Core.Security;
+using Coflnet.Sky.Chat.Infrastructure;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -85,12 +87,19 @@ namespace Coflnet.Sky.Chat
             // For common usages, see pull request #1233.
             var serverVersion = new MariaDbServerVersion(new Version(Configuration["MARIADB_VERSION"]));
 
-            // Replace 'YourDbContext' with the name of your own DbContext derived class.
-            services.AddDbContext<ChatDbContext>(
-                dbContextOptions => dbContextOptions
-                    .UseMySql(Configuration["DB_CONNECTION"], serverVersion, mySqlOptions => mySqlOptions
-                        .EnableRetryOnFailure(5).CommandTimeout(5))
-            );
+            var connectionString = DatabaseTls.ConnectionString(Configuration);
+            var sqlTlsEnabled = Configuration.GetSection("DB:TLS").Exists();
+            if (sqlTlsEnabled)
+            {
+                services.AddSingleton(_ => PemTlsOptions.FromConfiguration(Configuration.GetSection("DB:TLS")));
+                services.AddSingleton<DatabaseTlsInterceptor>();
+            }
+            services.AddDbContext<ChatDbContext>((provider, options) =>
+            {
+                options.UseMySql(connectionString, serverVersion, mysql => mysql.EnableRetryOnFailure(5).CommandTimeout(5));
+                if (sqlTlsEnabled)
+                    options.AddInterceptors(provider.GetRequiredService<DatabaseTlsInterceptor>());
+            });
             services.AddSingleton<ChatBackgroundService>();
             services.AddHostedService<ChatBackgroundService>(di => di.GetRequiredService<ChatBackgroundService>());
             services.AddJaeger(Configuration, 1);
@@ -142,6 +151,18 @@ namespace Coflnet.Sky.Chat
             {
                 endpoints.MapMetrics();
                 endpoints.MapControllers();
+                endpoints.MapGet("/health/ready", async context =>
+                {
+                    try
+                    {
+                        await DatabaseReadiness.CheckAsync(context.RequestServices, context.RequestAborted);
+                        context.Response.StatusCode = 200;
+                    }
+                    catch (Exception)
+                    {
+                        context.Response.StatusCode = 503;
+                    }
+                });
             });
         }
     }

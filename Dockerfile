@@ -1,11 +1,14 @@
 ARG dotnetversion=10.0
 FROM mcr.microsoft.com/dotnet/sdk:${dotnetversion} AS build
 WORKDIR /build
-RUN git clone --depth=1 https://github.com/Coflnet/HypixelSkyblock.git dev
+RUN git init dev \
+    && git -C dev fetch --depth=1 https://github.com/Coflnet/HypixelSkyblock.git 77c78f9a46d81bc6a01ccda8c81334d3976145ac \
+    && git -C dev checkout --detach FETCH_HEAD
 WORKDIR /build/sky
 COPY SkyChat.csproj SkyChat.csproj
 RUN dotnet restore
 COPY . .
+RUN dotnet test --no-restore
 RUN dotnet publish -c release -o /app /p:UseAppHost=false /p:PublishReadyToRun=true
 
 FROM mcr.microsoft.com/dotnet/aspnet:${dotnetversion}-noble-chiseled-extra
