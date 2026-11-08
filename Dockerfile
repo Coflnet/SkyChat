@@ -2,7 +2,7 @@ ARG dotnetversion=10.0
 FROM mcr.microsoft.com/dotnet/sdk:${dotnetversion} AS build
 WORKDIR /build
 RUN git init dev \
-    && git -C dev fetch --depth=1 https://github.com/Coflnet/HypixelSkyblock.git 77c78f9a46d81bc6a01ccda8c81334d3976145ac \
+    && git -C dev fetch --depth=1 https://github.com/Coflnet/HypixelSkyblock.git d87dbb1a2461deced758dcfc7f4927908b291425 \
     && git -C dev checkout --detach FETCH_HEAD
 WORKDIR /build/sky
 COPY SkyChat.csproj SkyChat.csproj
